@@ -25,6 +25,7 @@ import io.netty5.channel.DefaultBufferAddressedEnvelope;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.DatagramSocketAddress;
 import io.netty5.channel.unix.Errors;
 import io.netty5.channel.unix.IovArray;
@@ -54,7 +55,6 @@ import static io.netty5.channel.ChannelOption.SO_REUSEADDR;
 import static io.netty5.channel.ChannelOption.SO_SNDBUF;
 import static io.netty5.channel.kqueue.BsdSocket.newSocketDgram;
 import static io.netty5.channel.unix.UnixChannelOption.SO_REUSEPORT;
-import static java.util.Objects.requireNonNull;
 
 /**
  * {@link DatagramChannel} implementation that uses KQueue.
@@ -92,7 +92,8 @@ public final class KQueueDatagramChannel
     }
 
     public KQueueDatagramChannel(EventLoop eventLoop, ProtocolFamily protocolFamily) {
-        super(null, eventLoop, newSocketDgram(protocolFamily), false);
+        super(null, eventLoop,
+                newSocketDgram(protocolFamily == null ? null : SocketProtocolFamily.of(protocolFamily)), false);
     }
 
     public KQueueDatagramChannel(EventLoop eventLoop, int fd) {

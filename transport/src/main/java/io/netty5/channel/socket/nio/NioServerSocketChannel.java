@@ -47,6 +47,7 @@ import static io.netty5.channel.ChannelOption.SO_RCVBUF;
 import static io.netty5.channel.ChannelOption.SO_REUSEADDR;
 import static io.netty5.channel.socket.nio.NioChannelUtil.isDomainSocket;
 import static io.netty5.channel.socket.nio.NioChannelUtil.toDomainSocketAddress;
+import static io.netty5.channel.socket.nio.NioChannelUtil.toJdkFamily;
 import static io.netty5.channel.socket.nio.NioChannelUtil.toUnixDomainSocketAddress;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 
@@ -103,7 +104,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
      */
     public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
                                   SelectorProvider provider, ProtocolFamily protocolFamily) {
-        this(eventLoop, childEventLoopGroup, newChannel(provider, protocolFamily), protocolFamily);
+        this(eventLoop, childEventLoopGroup, newChannel(provider, toJdkFamily(protocolFamily)), protocolFamily);
     }
 
     /**
@@ -122,7 +123,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
             ServerSocketChannel channel, ProtocolFamily family) {
         super(null, eventLoop, METADATA, new ServerChannelRecvBufferAllocator(),
                 channel, SelectionKey.OP_ACCEPT);
-        this.family = family;
+        this.family = toJdkFamily(family);
         this.childEventLoopGroup = validateEventLoopGroup(
                 childEventLoopGroup, "childEventLoopGroup", NioSocketChannel.class);
     }

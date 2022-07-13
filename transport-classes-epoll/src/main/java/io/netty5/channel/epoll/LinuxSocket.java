@@ -17,6 +17,7 @@ package io.netty5.channel.epoll;
 
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.DefaultFileRegion;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.NativeInetAddress;
 import io.netty5.channel.unix.PeerCredentials;
 import io.netty5.channel.unix.Socket;
@@ -28,7 +29,6 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.ProtocolFamily;
-import java.net.StandardProtocolFamily;
 import java.net.UnknownHostException;
 import java.util.Enumeration;
 
@@ -48,7 +48,7 @@ public final class LinuxSocket extends Socket {
     }
 
     ProtocolFamily family() {
-        return ipv6 ? StandardProtocolFamily.INET6 : StandardProtocolFamily.INET;
+        return ipv6 ? SocketProtocolFamily.INET6 : SocketProtocolFamily.INET;
     }
 
     int sendmmsg(NativeDatagramPacketArray.NativeDatagramPacket[] msgs,
@@ -75,8 +75,8 @@ public final class LinuxSocket extends Socket {
     }
 
     void setNetworkInterface(NetworkInterface netInterface) throws IOException {
-        InetAddress address = deriveInetAddress(netInterface, family() == StandardProtocolFamily.INET6);
-        if (address.equals(family() == StandardProtocolFamily.INET ? INET_ANY : INET6_ANY)) {
+        InetAddress address = deriveInetAddress(netInterface, family() == SocketProtocolFamily.INET6);
+        if (address.equals(family() == SocketProtocolFamily.INET ? INET_ANY : INET6_ANY)) {
             throw new IOException("NetworkInterface does not support " + family());
         }
         final NativeInetAddress nativeAddress = NativeInetAddress.newInstance(address);

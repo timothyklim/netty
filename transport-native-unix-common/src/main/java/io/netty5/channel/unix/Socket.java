@@ -17,6 +17,7 @@ package io.netty5.channel.unix;
 
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.socket.DomainSocketAddress;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.util.CharsetUtil;
 import io.netty5.util.NetUtil;
 
@@ -27,7 +28,6 @@ import java.net.InetSocketAddress;
 import java.net.PortUnreachableException;
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
-import java.net.StandardProtocolFamily;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 
@@ -506,10 +506,10 @@ public class Socket extends FileDescriptor {
         if (family == null) {
             return isIPv6Preferred();
         }
-        if (family == StandardProtocolFamily.INET) {
+        if (family == SocketProtocolFamily.INET) {
             return false;
         }
-        if (family == StandardProtocolFamily.INET6) {
+        if (family == SocketProtocolFamily.INET6) {
             return true;
         }
         throw new IllegalArgumentException("ProtocolFamily not supported: " + family);

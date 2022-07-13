@@ -16,6 +16,7 @@
 package io.netty5.channel.socket.nio;
 
 import io.netty5.channel.socket.DomainSocketAddress;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
@@ -135,6 +136,13 @@ final class NioChannelUtil {
             }
         }
         return null;
+    }
+
+    static ProtocolFamily toJdkFamily(ProtocolFamily family) {
+        if (family instanceof SocketProtocolFamily) {
+            return ((SocketProtocolFamily) family).toJdkFamily();
+        }
+        return family;
     }
 
     private NioChannelUtil() { }

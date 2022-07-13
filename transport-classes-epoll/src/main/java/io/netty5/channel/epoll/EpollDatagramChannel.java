@@ -22,6 +22,7 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.FixedRecvBufferAllocator;
 import io.netty5.channel.RecvBufferAllocator;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.UnixChannel;
 import io.netty5.channel.unix.UnixChannelOption;
 import io.netty5.util.Resource;
@@ -55,7 +56,6 @@ import java.net.NetworkInterface;
 import java.net.PortUnreachableException;
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
-import java.net.StandardProtocolFamily;
 import java.net.SocketException;
 import java.util.Set;
 
@@ -131,8 +131,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
      * on the Operation Systems default which will be chosen.
      */
     public EpollDatagramChannel(EventLoop eventLoop, ProtocolFamily family) {
-        this(eventLoop, newSocketDgram(family),
-        false);
+        this(eventLoop, newSocketDgram(family == null ? null : SocketProtocolFamily.of(family)), false);
     }
 
     /**
@@ -301,7 +300,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             InetSocketAddress socketAddress = (InetSocketAddress) localAddress;
             if (socketAddress.getAddress().isAnyLocalAddress() &&
                     socketAddress.getAddress() instanceof Inet4Address) {
-                if (socket.family() == StandardProtocolFamily.INET6) {
+                if (socket.family() == SocketProtocolFamily.INET6) {
                     localAddress = new InetSocketAddress(LinuxSocket.INET6_ANY, socketAddress.getPort());
                 }
             }
