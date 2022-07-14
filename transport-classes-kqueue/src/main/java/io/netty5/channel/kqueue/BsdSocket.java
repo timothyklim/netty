@@ -16,6 +16,7 @@
 package io.netty5.channel.kqueue;
 
 import io.netty5.channel.DefaultFileRegion;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.channel.unix.PeerCredentials;
 import io.netty5.channel.unix.Socket;
@@ -50,8 +51,8 @@ final class BsdSocket extends Socket {
      */
     private static final int UNSPECIFIED_SOURCE_INTERFACE = 0;
 
-    BsdSocket(int fd) {
-        super(fd);
+    BsdSocket(int fd, SocketProtocolFamily protocolFamily) {
+        super(fd, protocolFamily);
     }
 
     void setAcceptFilter(AcceptFilter acceptFilter) throws IOException {
@@ -194,27 +195,34 @@ final class BsdSocket extends Socket {
     }
 
     public static BsdSocket newSocketStream() {
-        return new BsdSocket(newSocketStream0());
+        return new BsdSocket(newSocketStream0(), isIPv6Preferred() ?
+                SocketProtocolFamily.INET6 : SocketProtocolFamily.INET);
     }
 
     public static BsdSocket newSocketStream(ProtocolFamily protocol) {
-        return new BsdSocket(newSocketStream0(protocol));
+        return new BsdSocket(newSocketStream0(protocol), isIPv6Preferred() ?
+                SocketProtocolFamily.INET6 : SocketProtocolFamily.INET);
     }
 
     public static BsdSocket newSocketDgram() {
-        return new BsdSocket(newSocketDgram0());
+        return new BsdSocket(newSocketDgram0(), isIPv6Preferred() ?
+                SocketProtocolFamily.INET6 : SocketProtocolFamily.INET);
     }
 
     public static BsdSocket newSocketDgram(ProtocolFamily protocol) {
-        return new BsdSocket(newSocketDgram0(protocol));
+        if (protocol == null) {
+            protocol = isIPv6Preferred() ?
+                    SocketProtocolFamily.INET6 : SocketProtocolFamily.INET;
+        }
+        return new BsdSocket(newSocketDgram0(protocol), SocketProtocolFamily.of(protocol));
     }
 
     public static BsdSocket newSocketDomain() {
-        return new BsdSocket(newSocketDomain0());
+        return new BsdSocket(newSocketDomain0(), SocketProtocolFamily.UNIX);
     }
 
     public static BsdSocket newSocketDomainDgram() {
-        return new BsdSocket(newSocketDomainDgram0());
+        return new BsdSocket(newSocketDomainDgram0(), SocketProtocolFamily.UNIX);
     }
 
     private static native long sendFile(int socketFd, DefaultFileRegion src, long baseOffset,

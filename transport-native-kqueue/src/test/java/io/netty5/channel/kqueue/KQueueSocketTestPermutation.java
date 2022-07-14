@@ -23,6 +23,7 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
@@ -189,7 +190,8 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
 
     public List<BootstrapFactory<Bootstrap>> kqueueDomainDatagramSocket() {
         return Collections.singletonList(
-                () -> new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueDomainDatagramChannel.class)
+                () -> new Bootstrap().group(KQUEUE_WORKER_GROUP)
+                        .channelFactory(eventLoop -> new KQueueDatagramChannel(eventLoop, SocketProtocolFamily.UNIX))
         );
     }
 }

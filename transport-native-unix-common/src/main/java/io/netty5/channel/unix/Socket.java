@@ -30,6 +30,7 @@ import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import java.util.Objects;
 
 import static io.netty5.channel.unix.Errors.ERRNO_EAGAIN_NEGATIVE;
 import static io.netty5.channel.unix.Errors.ERRNO_EINPROGRESS_NEGATIVE;
@@ -52,11 +53,14 @@ public class Socket extends FileDescriptor {
     @Deprecated
     public static final int UDS_SUN_PATH_SIZE = 100;
 
+    private final SocketProtocolFamily protocolFamily;
+
     protected final boolean ipv6;
 
-    public Socket(int fd) {
+    public Socket(int fd, SocketProtocolFamily protocolFamily) {
         super(fd);
         ipv6 = isIPv6(fd);
+        this.protocolFamily = Objects.requireNonNull(protocolFamily, "protocolFamily");
     }
     /**
      * Returns {@code true} if we should use IPv6 internally, {@code false} otherwise.
@@ -71,6 +75,10 @@ public class Socket extends FileDescriptor {
      */
     protected static boolean useIpv6(Socket socket, InetAddress address) {
         return socket.ipv6 || address instanceof Inet6Address;
+    }
+
+    public final SocketProtocolFamily protocolFamily() {
+        return protocolFamily;
     }
 
     public final void shutdown() throws IOException {
@@ -527,19 +535,21 @@ public class Socket extends FileDescriptor {
     }
 
     public static Socket newSocketStream() {
-        return new Socket(newSocketStream0());
+        return new Socket(newSocketStream0(), isIPv6Preferred() ?
+                SocketProtocolFamily.INET6 : SocketProtocolFamily.INET);
     }
 
     public static Socket newSocketDgram() {
-        return new Socket(newSocketDgram0());
+        return new Socket(newSocketDgram0(),  isIPv6Preferred() ?
+                SocketProtocolFamily.INET6 : SocketProtocolFamily.INET);
     }
 
     public static Socket newSocketDomain() {
-        return new Socket(newSocketDomain0());
+        return new Socket(newSocketDomain0(), SocketProtocolFamily.UNIX);
     }
 
     public static Socket newSocketDomainDgram() {
-        return new Socket(newSocketDomainDgram0());
+        return new Socket(newSocketDomainDgram0(), SocketProtocolFamily.UNIX);
     }
 
     public static void initialize() {

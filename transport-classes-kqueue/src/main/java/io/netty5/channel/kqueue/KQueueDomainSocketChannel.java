@@ -21,6 +21,7 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.socket.DomainSocketAddress;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.DomainSocketReadMode;
 import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.channel.unix.PeerCredentials;
@@ -71,7 +72,7 @@ public final class KQueueDomainSocketChannel
     }
 
     public KQueueDomainSocketChannel(EventLoop eventLoop, int fd) {
-        this(null, eventLoop, new BsdSocket(fd));
+        this(null, eventLoop, new BsdSocket(fd, SocketProtocolFamily.UNIX));
     }
 
     KQueueDomainSocketChannel(UnixServerSocketChannel parent, EventLoop eventLoop, BsdSocket fd) {

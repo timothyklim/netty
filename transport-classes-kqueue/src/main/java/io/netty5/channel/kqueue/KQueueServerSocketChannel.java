@@ -21,11 +21,13 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.socket.ServerSocketChannel;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.UnixChannel;
 import io.netty5.util.NetUtil;
 import io.netty5.util.internal.UnstableApi;
 
 import java.io.IOException;
+import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.util.Set;
 
@@ -71,10 +73,11 @@ public final class KQueueServerSocketChannel extends
         super(eventLoop, childEventLoopGroup, KQueueSocketChannel.class, newSocketStream(), false);
     }
 
-    public KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, int fd) {
+    public KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
+                                     int fd, ProtocolFamily protocolFamily) {
         // Must call this constructor to ensure this object's local address is configured correctly.
         // The local address can only be obtained from a Socket object.
-        this(eventLoop, childEventLoopGroup, new BsdSocket(fd));
+        this(eventLoop, childEventLoopGroup, new BsdSocket(fd, SocketProtocolFamily.of(protocolFamily)));
     }
 
     KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, BsdSocket fd) {
@@ -248,6 +251,8 @@ public final class KQueueServerSocketChannel extends
     @Override
     protected Channel newChildChannel(int fd, byte[] address, int offset, int len) throws Exception {
         return new KQueueSocketChannel(this, childEventLoopGroup().next(),
-                                       new BsdSocket(fd), address(address, offset, len));
+                                       new BsdSocket(fd,
+                                               BsdSocket.isIPv6Preferred() ? SocketProtocolFamily.INET6 :
+                                                       SocketProtocolFamily.INET), address(address, offset, len));
     }
 }

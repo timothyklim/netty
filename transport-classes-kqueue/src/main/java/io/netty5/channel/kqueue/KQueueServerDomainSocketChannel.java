@@ -21,6 +21,7 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.socket.DomainSocketAddress;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.UnixChannel;
 import io.netty5.channel.unix.UnixServerSocketChannel;
 import io.netty5.util.NetUtil;
@@ -71,7 +72,7 @@ public final class KQueueServerDomainSocketChannel
     }
 
     public KQueueServerDomainSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, int fd) {
-        this(eventLoop, childEventLoopGroup, new BsdSocket(fd), false);
+        this(eventLoop, childEventLoopGroup, new BsdSocket(fd, SocketProtocolFamily.UNIX), false);
     }
 
     KQueueServerDomainSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
@@ -162,7 +163,8 @@ public final class KQueueServerDomainSocketChannel
 
     @Override
     protected Channel newChildChannel(int fd, byte[] addr, int offset, int len) throws Exception {
-        return new KQueueDomainSocketChannel(this, childEventLoopGroup().next(), new BsdSocket(fd));
+        return new KQueueDomainSocketChannel(this, childEventLoopGroup().next(),
+                new BsdSocket(fd, SocketProtocolFamily.UNIX));
     }
 
     @Override

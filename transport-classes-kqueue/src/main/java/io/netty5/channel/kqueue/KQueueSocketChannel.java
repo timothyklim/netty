@@ -21,6 +21,7 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.socket.SocketChannel;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.channel.unix.UnixChannel;
 import io.netty5.util.concurrent.Future;
@@ -75,16 +76,16 @@ public final class KQueueSocketChannel
         this(eventLoop, null);
     }
 
-    public KQueueSocketChannel(EventLoop eventLoop, ProtocolFamily protocol) {
-        super(null, eventLoop, BsdSocket.newSocketStream(protocol), false);
+    public KQueueSocketChannel(EventLoop eventLoop, ProtocolFamily protocolFamily) {
+        super(null, eventLoop, BsdSocket.newSocketStream(protocolFamily), false);
         if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
             setTcpNoDelay(true);
         }
         calculateMaxBytesPerGatheringWrite();
     }
 
-    public KQueueSocketChannel(EventLoop eventLoop, int fd) {
-        super(eventLoop, new BsdSocket(fd));
+    public KQueueSocketChannel(EventLoop eventLoop, int fd, ProtocolFamily protocolFamily) {
+        super(eventLoop, new BsdSocket(fd, SocketProtocolFamily.of(protocolFamily)));
         if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
             setTcpNoDelay(true);
         }
