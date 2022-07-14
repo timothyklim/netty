@@ -270,6 +270,11 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         return remoteAddress;
     }
 
+    protected final void cacheAddresses(L localAddress, R  remoteAddress) {
+        this.localAddress = localAddress;
+        this.remoteAddress = remoteAddress;
+    }
+
     @Override
     public final boolean isRegistered() {
         return registered;
