@@ -59,7 +59,7 @@ import static java.util.Objects.requireNonNull;
  */
 @UnstableApi
 public final class KQueueDomainSocketChannel
-        extends AbstractKQueueStreamChannel<UnixServerSocketChannel, DomainSocketAddress, DomainSocketAddress>
+        extends AbstractKQueueStreamChannel<UnixServerSocketChannel>
         implements UnixSocketChannel {
 
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
@@ -77,6 +77,11 @@ public final class KQueueDomainSocketChannel
 
     KQueueDomainSocketChannel(UnixServerSocketChannel parent, EventLoop eventLoop, BsdSocket fd) {
         super(parent, eventLoop, fd, true);
+    }
+
+    @Override
+    protected boolean fetchLocalAddress() {
+        return false;
     }
 
     @SuppressWarnings("unchecked")

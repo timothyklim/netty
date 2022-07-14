@@ -194,6 +194,20 @@ final class BsdSocket extends Socket {
         return result;
     }
 
+    public static BsdSocket newDatagramSocket(ProtocolFamily family) {
+        if (family == null) {
+            return newSocketDgram();
+        }
+        switch (SocketProtocolFamily.of(family)) {
+            case UNIX:
+                return newSocketDomainDgram();
+            case INET6:
+            case INET:
+                return newSocketDgram(family);
+            default:
+                throw new UnsupportedOperationException();
+        }
+    }
     public static BsdSocket newSocketStream() {
         return new BsdSocket(newSocketStream0(), isIPv6Preferred() ?
                 SocketProtocolFamily.INET6 : SocketProtocolFamily.INET);

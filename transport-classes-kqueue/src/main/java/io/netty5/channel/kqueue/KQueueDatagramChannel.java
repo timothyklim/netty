@@ -19,10 +19,14 @@ import io.netty5.buffer.api.Buffer;
 import io.netty5.buffer.api.BufferAllocator;
 import io.netty5.channel.AddressedEnvelope;
 import io.netty5.channel.ChannelException;
+import io.netty5.channel.ChannelMetadata;
 import io.netty5.channel.ChannelOption;
+import io.netty5.channel.ChannelOutboundBuffer;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultBufferAddressedEnvelope;
 import io.netty5.channel.EventLoop;
+import io.netty5.channel.FixedRecvBufferAllocator;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.DomainSocketAddress;
@@ -36,6 +40,7 @@ import io.netty5.channel.unix.UnixChannel;
 import io.netty5.channel.unix.UnixChannelOption;
 import io.netty5.channel.unix.UnixChannelUtil;
 import io.netty5.util.UncheckedBooleanSupplier;
+import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
@@ -43,7 +48,9 @@ import io.netty5.util.internal.logging.InternalLogger;
 import io.netty5.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 import java.net.PortUnreachableException;
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
@@ -56,7 +63,6 @@ import static io.netty5.channel.ChannelOption.SO_BROADCAST;
 import static io.netty5.channel.ChannelOption.SO_RCVBUF;
 import static io.netty5.channel.ChannelOption.SO_REUSEADDR;
 import static io.netty5.channel.ChannelOption.SO_SNDBUF;
-import static io.netty5.channel.kqueue.BsdSocket.newSocketDgram;
 import static io.netty5.channel.unix.UnixChannelOption.SO_REUSEPORT;
 import static io.netty5.util.CharsetUtil.UTF_8;
 import static java.util.Objects.requireNonNull;
@@ -81,11 +87,13 @@ import static java.util.Objects.requireNonNull;
  */
 @UnstableApi
 public final class KQueueDatagramChannel
-        extends AbstractKQueueDatagramChannel<UnixChannel, SocketAddress, SocketAddress> {
+        extends AbstractKQueueChannel<UnixChannel> implements DatagramChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(KQueueDatagramChannel.class);
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
 
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS_DOMAIN_SOCKET = supportedOptionsDomainSocket();
+
+    private static final ChannelMetadata METADATA = new ChannelMetadata(true);
 
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
@@ -102,26 +110,34 @@ public final class KQueueDatagramChannel
                     StringUtil.simpleClassName(DomainSocketAddress.class) + ">, " +
                     StringUtil.simpleClassName(Buffer.class) + ')';
     private volatile boolean connected;
+    private volatile boolean inputShutdown;
+    private volatile boolean outputShutdown;
+
     private boolean activeOnOpen;
+
     public KQueueDatagramChannel(EventLoop eventLoop) {
         this(eventLoop, null);
     }
 
     public KQueueDatagramChannel(EventLoop eventLoop, ProtocolFamily protocolFamily) {
-        super(null, eventLoop,
-                newSocketDgram(protocolFamily == null ? null : SocketProtocolFamily.of(protocolFamily)), false);
+        super(null, eventLoop, METADATA, new FixedRecvBufferAllocator(2048),
+                BsdSocket.newDatagramSocket(protocolFamily), false);
     }
 
     public KQueueDatagramChannel(EventLoop eventLoop, int fd, ProtocolFamily protocolFamily) {
-        this(eventLoop, new BsdSocket(fd, SocketProtocolFamily.of(
-                requireNonNull(protocolFamily, "protocolFamily"))), true);
+        this(eventLoop, new BsdSocket(fd, SocketProtocolFamily.of(protocolFamily)), true);
     }
 
     KQueueDatagramChannel(EventLoop eventLoop, BsdSocket socket, boolean active) {
-        super(null, eventLoop, socket, active);
+        super(null, eventLoop, METADATA, new FixedRecvBufferAllocator(2048), socket, active);
     }
 
-    @SuppressWarnings({ "unchecked", "deprecation" })
+    @Override
+    protected boolean fetchLocalAddress() {
+        return socket.protocolFamily() != SocketProtocolFamily.UNIX;
+    }
+
+    @SuppressWarnings( "unchecked")
     @Override
     protected  <T> T getExtendedOption(ChannelOption<T> option) {
         if (isExtendedOptionSupported(option)) {
@@ -151,7 +167,6 @@ public final class KQueueDatagramChannel
     }
 
     @Override
-    @SuppressWarnings("deprecation")
     protected  <T> void setExtendedOption(ChannelOption<T> option, T value) {
         if (isExtendedOptionSupported(option)) {
             if (option == SO_BROADCAST) {
@@ -169,6 +184,7 @@ public final class KQueueDatagramChannel
             } else if (option == SO_REUSEPORT) {
                 setReusePort((Boolean) value);
             }
+            return;
         }
         super.setExtendedOption(option, value);
     }
@@ -330,8 +346,7 @@ public final class KQueueDatagramChannel
         active = true;
     }
 
-    @Override
-    protected boolean doWriteMessage(Object msg) throws Exception {
+    private boolean doWriteMessage(Object msg) throws Exception {
         final Object data;
         final SocketAddress remoteAddress;
         if (msg instanceof AddressedEnvelope) {
@@ -584,6 +599,126 @@ public final class KQueueDatagramChannel
             }
         } finally {
             readReadyFinally();
+        }
+    }
+
+    private <V> Future<V> newMulticastNotSupportedFuture() {
+        return newFailedFuture(new UnsupportedOperationException("Multicast not supported"));
+    }
+
+    @Override
+    public final Future<Void> joinGroup(InetAddress multicastAddress) {
+        requireNonNull(multicastAddress, "multicast");
+        return newMulticastNotSupportedFuture();
+    }
+
+    @Override
+    public final Future<Void> joinGroup(
+            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
+        requireNonNull(multicastAddress, "multicastAddress");
+        requireNonNull(networkInterface, "networkInterface");
+
+        return newMulticastNotSupportedFuture();
+    }
+
+    @Override
+    public final Future<Void> leaveGroup(InetAddress multicastAddress) {
+        requireNonNull(multicastAddress, "multicast");
+        return newMulticastNotSupportedFuture();
+    }
+
+    @Override
+    public final Future<Void> leaveGroup(
+            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
+        requireNonNull(multicastAddress, "multicastAddress");
+        requireNonNull(networkInterface, "networkInterface");
+
+        return newMulticastNotSupportedFuture();
+    }
+
+    @Override
+    public final Future<Void> block(
+            InetAddress multicastAddress, NetworkInterface networkInterface,
+            InetAddress sourceToBlock) {
+        requireNonNull(multicastAddress, "multicastAddress");
+        requireNonNull(sourceToBlock, "sourceToBlock");
+        requireNonNull(networkInterface, "networkInterface");
+
+        return newMulticastNotSupportedFuture();
+    }
+
+    @Override
+    public final Future<Void> block(InetAddress multicastAddress, InetAddress sourceToBlock) {
+        requireNonNull(multicastAddress, "multicastAddress");
+        requireNonNull(sourceToBlock, "sourceToBlock");
+
+        return newMulticastNotSupportedFuture();
+    }
+
+    @Override
+    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        int maxMessagesPerWrite = getMaxMessagesPerWrite();
+        while (maxMessagesPerWrite > 0) {
+            Object msg = in.current();
+            if (msg == null) {
+                break;
+            }
+
+            try {
+                boolean done = false;
+                for (int i = getWriteSpinCount(); i > 0; --i) {
+                    if (doWriteMessage(msg)) {
+                        done = true;
+                        break;
+                    }
+                }
+
+                if (done) {
+                    in.remove();
+                    maxMessagesPerWrite--;
+                } else {
+                    break;
+                }
+            } catch (IOException e) {
+                maxMessagesPerWrite--;
+
+                // Continue on write error as a DatagramChannel can write to multiple remote peers
+                //
+                // See https://github.com/netty/netty/issues/2665
+                in.remove(e);
+            }
+        }
+
+        // Whether all messages were written or not.
+        writeFilter(!in.isEmpty());
+    }
+
+    @Override
+    protected void doShutdown(ChannelShutdownDirection direction) {
+        switch (direction) {
+            case Inbound:
+                inputShutdown = true;
+                break;
+            case Outbound:
+                outputShutdown = true;
+                break;
+            default:
+                throw new AssertionError();
+        }
+    }
+
+    @Override
+    public boolean isShutdown(ChannelShutdownDirection direction) {
+        if (!isActive()) {
+            return true;
+        }
+        switch (direction) {
+            case Inbound:
+                return inputShutdown;
+            case Outbound:
+                return outputShutdown;
+            default:
+                throw new AssertionError();
         }
     }
 }

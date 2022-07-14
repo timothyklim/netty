@@ -31,8 +31,8 @@ import java.net.SocketAddress;
 
 @UnstableApi
 public abstract class AbstractKQueueServerChannel
-        <P extends UnixChannel, L extends SocketAddress, R extends SocketAddress>
-        extends AbstractKQueueChannel<P, L, R> implements ServerChannel {
+        <P extends UnixChannel>
+        extends AbstractKQueueChannel<P> implements ServerChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private final EventLoopGroup childEventLoopGroup;
 
@@ -58,7 +58,7 @@ public abstract class AbstractKQueueServerChannel
     }
 
     @Override
-    protected R remoteAddress0() {
+    protected SocketAddress remoteAddress0() {
         return null;
     }
 

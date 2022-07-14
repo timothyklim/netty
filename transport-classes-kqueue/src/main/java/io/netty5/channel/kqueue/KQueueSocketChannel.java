@@ -67,7 +67,7 @@ import static io.netty5.channel.kqueue.KQueueChannelOption.TCP_NOPUSH;
  */
 @UnstableApi
 public final class KQueueSocketChannel
-        extends AbstractKQueueStreamChannel<KQueueServerSocketChannel, SocketAddress, SocketAddress>
+        extends AbstractKQueueStreamChannel<KQueueServerSocketChannel>
         implements SocketChannel {
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
     private volatile boolean tcpFastopen;
@@ -99,6 +99,11 @@ public final class KQueueSocketChannel
             setTcpNoDelay(true);
         }
         calculateMaxBytesPerGatheringWrite();
+    }
+
+    @Override
+    protected boolean fetchLocalAddress() {
+        return true;
     }
 
     @SuppressWarnings("unchecked")

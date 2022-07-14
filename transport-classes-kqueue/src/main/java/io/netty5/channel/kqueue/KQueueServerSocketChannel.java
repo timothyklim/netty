@@ -65,7 +65,7 @@ import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
  */
 @UnstableApi
 public final class KQueueServerSocketChannel extends
-        AbstractKQueueServerChannel<UnixChannel, SocketAddress, SocketAddress> implements ServerSocketChannel {
+        AbstractKQueueServerChannel<UnixChannel> implements ServerSocketChannel {
     private static final Set<ChannelOption<?>> SUPPORTED_OPTIONS = supportedOptions();
     private volatile int backlog = NetUtil.SOMAXCONN;
     private volatile boolean enableTcpFastOpen;
@@ -86,6 +86,11 @@ public final class KQueueServerSocketChannel extends
 
     KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, BsdSocket fd, boolean active) {
         super(eventLoop, childEventLoopGroup, KQueueSocketChannel.class, fd, active);
+    }
+
+    @Override
+    protected boolean fetchLocalAddress() {
+        return true;
     }
 
     @Override

@@ -531,6 +531,7 @@ public class Socket extends FileDescriptor {
     public String toString() {
         return "Socket{" +
                 "fd=" + fd +
+                ", family=" + protocolFamily +
                 '}';
     }
 

@@ -45,8 +45,8 @@ import static io.netty5.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 
 @UnstableApi
 public abstract class AbstractKQueueStreamChannel
-        <P extends UnixChannel, L extends SocketAddress, R extends SocketAddress>
-        extends AbstractKQueueChannel<P, L, R> {
+        <P extends UnixChannel>
+        extends AbstractKQueueChannel<P> {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(Buffer.class) + ", " +
@@ -61,7 +61,7 @@ public abstract class AbstractKQueueStreamChannel
         super(parent, eventLoop, METADATA, new AdaptiveRecvBufferAllocator(), fd, active);
     }
 
-    AbstractKQueueStreamChannel(P parent, EventLoop eventLoop, BsdSocket fd, R remote) {
+    AbstractKQueueStreamChannel(P parent, EventLoop eventLoop, BsdSocket fd, SocketAddress remote) {
         super(parent, eventLoop, METADATA, new AdaptiveRecvBufferAllocator(), fd, remote);
     }
 

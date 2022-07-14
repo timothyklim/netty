@@ -58,7 +58,7 @@ import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
  */
 @UnstableApi
 public final class KQueueServerDomainSocketChannel
-        extends AbstractKQueueServerChannel<UnixChannel, DomainSocketAddress, DomainSocketAddress>
+        extends AbstractKQueueServerChannel<UnixChannel>
         implements UnixServerSocketChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(
             KQueueServerDomainSocketChannel.class);
@@ -78,6 +78,11 @@ public final class KQueueServerDomainSocketChannel
     KQueueServerDomainSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
                                     BsdSocket socket, boolean active) {
         super(eventLoop, childEventLoopGroup, KQueueDomainSocketChannel.class, socket, active);
+    }
+
+    @Override
+    protected boolean fetchLocalAddress() {
+        return false;
     }
 
     @SuppressWarnings("unchecked")

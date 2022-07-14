@@ -189,9 +189,19 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
     }
 
     public List<BootstrapFactory<Bootstrap>> kqueueDomainDatagramSocket() {
-        return Collections.singletonList(
-                () -> new Bootstrap().group(KQUEUE_WORKER_GROUP)
-                        .channelFactory(eventLoop -> new KQueueDatagramChannel(eventLoop, SocketProtocolFamily.UNIX))
+        return Collections.singletonList(() -> new Bootstrap().group(KQUEUE_WORKER_GROUP)
+                        .channelFactory(new ChannelFactory<>() {
+                            @Override
+                            public Channel newChannel(EventLoop eventLoop) {
+                                return new KQueueDatagramChannel(eventLoop, SocketProtocolFamily.UNIX);
+                            }
+
+                            @Override
+                            public String toString() {
+                                return KQueueDatagramChannel.class.getSimpleName()
+                                        + "(..., " + SocketProtocolFamily.UNIX;
+                            }
+                        })
         );
     }
 }
