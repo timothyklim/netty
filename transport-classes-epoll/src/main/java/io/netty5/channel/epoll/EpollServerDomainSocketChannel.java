@@ -21,6 +21,7 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.socket.DomainSocketAddress;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.Socket;
 import io.netty5.channel.unix.UnixChannel;
 import io.netty5.channel.unix.UnixServerSocketChannel;
@@ -77,7 +78,8 @@ public final class EpollServerDomainSocketChannel
 
     @Override
     protected Channel newChildChannel(int fd, byte[] addr, int offset, int len) {
-        return new EpollDomainSocketChannel(this, childEventLoopGroup().next(), new Socket(fd));
+        return new EpollDomainSocketChannel(this, childEventLoopGroup().next(),
+                new Socket(fd, SocketProtocolFamily.UNIX));
     }
 
     @Override

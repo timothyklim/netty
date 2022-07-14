@@ -21,6 +21,7 @@ import io.netty5.buffer.api.DefaultBufferAllocators;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.RecvBufferAllocator;
+import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.IntegerUnixChannelOption;
 import io.netty5.channel.unix.RawUnixChannelOption;
 import io.netty5.channel.unix.Socket;
@@ -583,7 +584,9 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         }
     }
 
-    protected abstract boolean fetchLocalAddress();
+    protected boolean fetchLocalAddress() {
+        return socket.protocolFamily() != SocketProtocolFamily.UNIX;
+    }
 
     /**
      * Connect to the remote peer

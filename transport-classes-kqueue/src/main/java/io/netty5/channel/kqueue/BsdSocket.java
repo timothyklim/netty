@@ -208,6 +208,22 @@ final class BsdSocket extends Socket {
                 throw new UnsupportedOperationException();
         }
     }
+
+    public static BsdSocket newSocket(ProtocolFamily family) {
+        if (family == null) {
+            return newSocketStream();
+        }
+        switch (SocketProtocolFamily.of(family)) {
+            case UNIX:
+                return newSocketDomain();
+            case INET6:
+            case INET:
+                return newSocketStream(family);
+            default:
+                throw new UnsupportedOperationException();
+        }
+    }
+
     public static BsdSocket newSocketStream() {
         return new BsdSocket(newSocketStream0(), isIPv6Preferred() ?
                 SocketProtocolFamily.INET6 : SocketProtocolFamily.INET);

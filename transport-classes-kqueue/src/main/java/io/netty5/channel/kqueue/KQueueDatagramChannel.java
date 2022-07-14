@@ -132,15 +132,10 @@ public final class KQueueDatagramChannel
         super(null, eventLoop, METADATA, new FixedRecvBufferAllocator(2048), socket, active);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
-    protected boolean fetchLocalAddress() {
-        return socket.protocolFamily() != SocketProtocolFamily.UNIX;
-    }
-
-    @SuppressWarnings( "unchecked")
-    @Override
-    protected  <T> T getExtendedOption(ChannelOption<T> option) {
-        if (isExtendedOptionSupported(option)) {
+    protected <T> T getExtendedOption(ChannelOption<T> option) {
+        if (isSupported(socket.protocolFamily(), option)) {
             if (option == SO_BROADCAST) {
                 return (T) Boolean.valueOf(isBroadcast());
             }
@@ -168,7 +163,7 @@ public final class KQueueDatagramChannel
 
     @Override
     protected  <T> void setExtendedOption(ChannelOption<T> option, T value) {
-        if (isExtendedOptionSupported(option)) {
+        if (isSupported(socket.protocolFamily(), option)) {
             if (option == SO_BROADCAST) {
                 setBroadcast((Boolean) value);
             } else if (option == SO_RCVBUF) {
@@ -184,31 +179,28 @@ public final class KQueueDatagramChannel
             } else if (option == SO_REUSEPORT) {
                 setReusePort((Boolean) value);
             }
-            return;
+        } else {
+            super.setExtendedOption(option, value);
         }
-        super.setExtendedOption(option, value);
+    }
+
+    private boolean isSupported(SocketProtocolFamily protocolFamily, ChannelOption<?> option) {
+        if (protocolFamily == SocketProtocolFamily.UNIX) {
+            return SUPPORTED_OPTIONS_DOMAIN_SOCKET.contains(option);
+        }
+        return SUPPORTED_OPTIONS.contains(option);
     }
 
     @Override
     protected boolean isExtendedOptionSupported(ChannelOption<?> option) {
-        if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
-            if (SUPPORTED_OPTIONS_DOMAIN_SOCKET.contains(option)) {
-                return true;
-            }
-        } else if (SUPPORTED_OPTIONS.contains(option)) {
-            return true;
-        }
-        return super.isExtendedOptionSupported(option);
+        return isSupported(socket.protocolFamily(), option) || super.isExtendedOptionSupported(option);
     }
 
-    @SuppressWarnings("deprecation")
     private static Set<ChannelOption<?>> supportedOptions() {
         return newSupportedIdentityOptionsSet(SO_BROADCAST, SO_RCVBUF, SO_SNDBUF, SO_REUSEADDR, IP_TOS,
                 DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, SO_REUSEPORT);
     }
 
-
-    @SuppressWarnings("deprecation")
     private static Set<ChannelOption<?>> supportedOptionsDomainSocket() {
         return newSupportedIdentityOptionsSet(SO_SNDBUF, SO_RCVBUF, DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION);
     }
@@ -380,13 +372,13 @@ public final class KQueueDatagramChannel
             } else {
                 if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
                     writtenBytes = socket.sendToAddressesDomainSocket(
-                            array.memoryAddress(0), count, ((DomainSocketAddress) remoteAddress).path().getBytes(UTF_8));
+                            array.memoryAddress(0), count,
+                            ((DomainSocketAddress) remoteAddress).path().getBytes(UTF_8));
                 } else {
                     InetSocketAddress inetSocketAddress = (InetSocketAddress) remoteAddress;
                     writtenBytes = socket.sendToAddresses(array.memoryAddress(0), count,
                             inetSocketAddress.getAddress(), inetSocketAddress.getPort());
                 }
-
             }
             return writtenBytes > 0;
         } else {
@@ -408,8 +400,8 @@ public final class KQueueDatagramChannel
                 } else {
                     InetSocketAddress inetSocketAddress = (InetSocketAddress) remoteAddress;
                     data.forEachReadable(0, (index, component) -> {
-                        int written = socket.sendToAddress(component.readableNativeAddress(), 0, component.readableBytes(),
-                                inetSocketAddress.getAddress(), inetSocketAddress.getPort());
+                        int written = socket.sendToAddress(component.readableNativeAddress(), 0,
+                                component.readableBytes(), inetSocketAddress.getAddress(), inetSocketAddress.getPort());
                         component.skipReadableBytes(written);
                         return false;
                     });
@@ -548,12 +540,13 @@ public final class KQueueDatagramChannel
                                     datagramSocketAddress = socket.recvFromAddress(addr, 0, component.writableBytes());
                                 } else {
                                     ByteBuffer nioData = component.writableBuffer();
-                                    datagramSocketAddress = socket.recvFrom(nioData, nioData.position(), nioData.limit());
+                                    datagramSocketAddress = socket.recvFrom(
+                                            nioData, nioData.position(), nioData.limit());
                                 }
                                 if (datagramSocketAddress != null) {
                                     remoteAddress = datagramSocketAddress;
                                     localAddress = datagramSocketAddress.localAddress();
-                                    bytesRead = allocHandle.lastBytesRead();
+                                    bytesRead = datagramSocketAddress.receivedAmount();
                                 }
                             }
                         }
@@ -607,13 +600,13 @@ public final class KQueueDatagramChannel
     }
 
     @Override
-    public final Future<Void> joinGroup(InetAddress multicastAddress) {
+    public Future<Void> joinGroup(InetAddress multicastAddress) {
         requireNonNull(multicastAddress, "multicast");
         return newMulticastNotSupportedFuture();
     }
 
     @Override
-    public final Future<Void> joinGroup(
+    public Future<Void> joinGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
         requireNonNull(multicastAddress, "multicastAddress");
         requireNonNull(networkInterface, "networkInterface");
@@ -622,13 +615,13 @@ public final class KQueueDatagramChannel
     }
 
     @Override
-    public final Future<Void> leaveGroup(InetAddress multicastAddress) {
+    public Future<Void> leaveGroup(InetAddress multicastAddress) {
         requireNonNull(multicastAddress, "multicast");
         return newMulticastNotSupportedFuture();
     }
 
     @Override
-    public final Future<Void> leaveGroup(
+    public Future<Void> leaveGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
         requireNonNull(multicastAddress, "multicastAddress");
         requireNonNull(networkInterface, "networkInterface");
@@ -637,7 +630,7 @@ public final class KQueueDatagramChannel
     }
 
     @Override
-    public final Future<Void> block(
+    public Future<Void> block(
             InetAddress multicastAddress, NetworkInterface networkInterface,
             InetAddress sourceToBlock) {
         requireNonNull(multicastAddress, "multicastAddress");
@@ -648,7 +641,7 @@ public final class KQueueDatagramChannel
     }
 
     @Override
-    public final Future<Void> block(InetAddress multicastAddress, InetAddress sourceToBlock) {
+    public Future<Void> block(InetAddress multicastAddress, InetAddress sourceToBlock) {
         requireNonNull(multicastAddress, "multicastAddress");
         requireNonNull(sourceToBlock, "sourceToBlock");
 

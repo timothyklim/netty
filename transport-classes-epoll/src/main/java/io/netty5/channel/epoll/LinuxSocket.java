@@ -44,7 +44,7 @@ public final class LinuxSocket extends Socket {
     private static final long MAX_UINT32_T = 0xFFFFFFFFL;
 
     LinuxSocket(int fd) {
-        super(fd);
+        super(fd, null);
     }
 
     ProtocolFamily family() {
