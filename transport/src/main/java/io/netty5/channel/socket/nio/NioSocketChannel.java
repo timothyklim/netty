@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
+import java.net.StandardProtocolFamily;
 import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
@@ -355,18 +356,20 @@ public class NioSocketChannel
 
     @Override
     protected Future<Executor> prepareToClose() {
-        try {
-            if (javaChannel().isOpen() && getOption(ChannelOption.SO_LINGER) > 0) {
-                // We need to cancel this key of the channel so we may not end up in a eventloop spin
-                // because we try to read or write until the actual close happens which may be later due
-                // SO_LINGER handling.
+        if (!isDomainSocket(family)) {
+            try {
+                if (javaChannel().isOpen() && getOption(ChannelOption.SO_LINGER) > 0) {
+                    // We need to cancel this key of the channel so we may not end up in a eventloop spin
+                    // because we try to read or write until the actual close happens which may be later due
+                    // SO_LINGER handling.
+                    // See https://github.com/netty/netty/issues/4449
+                    return executor().deregisterForIo(this).map(v -> GlobalEventExecutor.INSTANCE);
+                }
+            } catch (Throwable ignore) {
+                // Ignore the error as the underlying channel may be closed in the meantime and so
+                // getSoLinger() may produce an exception. In this case we just return null.
                 // See https://github.com/netty/netty/issues/4449
-                return executor().deregisterForIo(this).map(v -> GlobalEventExecutor.INSTANCE);
             }
-        } catch (Throwable ignore) {
-            // Ignore the error as the underlying channel may be closed in the meantime and so
-            // getSoLinger() may produce an exception. In this case we just return null.
-            // See https://github.com/netty/netty/issues/4449
         }
         return null;
     }

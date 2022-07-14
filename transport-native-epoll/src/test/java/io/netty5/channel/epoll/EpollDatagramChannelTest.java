@@ -61,7 +61,8 @@ public class EpollDatagramChannelTest {
         EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
         try {
             Socket socket = Socket.newSocketDgram();
-            EpollDatagramChannel channel = new EpollDatagramChannel(group.next(), socket.intValue());
+            EpollDatagramChannel channel = new EpollDatagramChannel(
+                    group.next(), socket.intValue(), socket.protocolFamily());
             SocketAddress localAddress = channel.localAddress();
             assertTrue(channel.active);
             assertNotNull(localAddress);

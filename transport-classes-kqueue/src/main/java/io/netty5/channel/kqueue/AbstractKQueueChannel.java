@@ -83,7 +83,6 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     private volatile SocketAddress localAddress;
     private volatile SocketAddress remoteAddress;
 
-    @SuppressWarnings("unchecked")
     AbstractKQueueChannel(P parent, EventLoop eventLoop, ChannelMetadata metadata,
                           RecvBufferAllocator defaultRecvAllocator, BsdSocket fd, boolean active) {
         super(parent, eventLoop, metadata, defaultRecvAllocator);
@@ -97,7 +96,6 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         }
     }
 
-    @SuppressWarnings("unchecked")
     AbstractKQueueChannel(P parent, EventLoop eventLoop, ChannelMetadata metadata,
                           RecvBufferAllocator defaultRecvAllocator, BsdSocket fd, SocketAddress remote) {
         super(parent, eventLoop, metadata, defaultRecvAllocator);

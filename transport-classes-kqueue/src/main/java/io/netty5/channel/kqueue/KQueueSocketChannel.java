@@ -460,20 +460,22 @@ public final class KQueueSocketChannel
 
     @Override
     protected Future<Executor> prepareToClose() {
-        try {
-            // Check isOpen() first as otherwise it will throw a RuntimeException
-            // when call getSoLinger() as the fd is not valid anymore.
-            if (isOpen() && getSoLinger() > 0) {
-                // We need to cancel this key of the channel so we may not end up in a eventloop spin
-                // because we try to read or write until the actual close happens which may be later due
-                // SO_LINGER handling.
+        if (socket.protocolFamily() != SocketProtocolFamily.UNIX) {
+            try {
+                // Check isOpen() first as otherwise it will throw a RuntimeException
+                // when call getSoLinger() as the fd is not valid anymore.
+                if (isOpen() && getSoLinger() > 0) {
+                    // We need to cancel this key of the channel so we may not end up in a eventloop spin
+                    // because we try to read or write until the actual close happens which may be later due
+                    // SO_LINGER handling.
+                    // See https://github.com/netty/netty/issues/4449
+                    return executor().deregisterForIo(this).map(v -> GlobalEventExecutor.INSTANCE);
+                }
+            } catch (Throwable ignore) {
+                // Ignore the error as the underlying channel may be closed in the meantime and so
+                // getSoLinger() may produce an exception. In this case we just return null.
                 // See https://github.com/netty/netty/issues/4449
-                return executor().deregisterForIo(this).map(v -> GlobalEventExecutor.INSTANCE);
             }
-        } catch (Throwable ignore) {
-            // Ignore the error as the underlying channel may be closed in the meantime and so
-            // getSoLinger() may produce an exception. In this case we just return null.
-            // See https://github.com/netty/netty/issues/4449
         }
         return null;
     }
@@ -540,6 +542,9 @@ public final class KQueueSocketChannel
      */
     @UnstableApi
     public PeerCredentials peerCredentials() throws IOException {
+        if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+            throw new UnsupportedOperationException();
+        }
         return socket.getPeerCredentials();
     }
 
